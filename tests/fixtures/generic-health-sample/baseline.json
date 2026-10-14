@@ -1,0 +1,135 @@
+{
+  "urls": [
+    {
+      "url": "https://guidelines.example.test/airway/",
+      "identifier": []
+    },
+    {
+      "url": "https://guidelines.example.test/airway/preparation/",
+      "identifier": [
+        {
+          "name": "preparation-title",
+          "container": "main > h1",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "preparation-assessment",
+          "container": "main > p:not(.share)",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "preparation-critical",
+          "container": "main > aside",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false
+        },
+        {
+          "name": "preparation-checklist-heading",
+          "container": "main > h2",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "preparation-equipment",
+          "container": "main > ul",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "preparation-table",
+          "container": "main > table",
+          "role": "table",
+          "type": "none",
+          "parse_mode": true
+        }
+      ]
+    },
+    {
+      "url": "https://guidelines.example.test/airway/suction-procedure/",
+      "identifier": [
+        {
+          "name": "procedure-title",
+          "container": "main > h1",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "procedure-intro",
+          "container": "main > p:not(.share)",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "procedure-steps",
+          "container": "main > ol",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "procedure-critical",
+          "container": "main > aside",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false
+        },
+        {
+          "name": "procedure-media",
+          "container": "main > figure",
+          "role": "media",
+          "type": "none",
+          "parse_mode": false
+        }
+      ]
+    },
+    {
+      "url": "https://guidelines.example.test/airway/discharge/",
+      "identifier": [
+        {
+          "name": "discharge-title",
+          "container": "main > h1",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "discharge-intro",
+          "container": "main > p:not(.share)",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "discharge-heading",
+          "container": "main > h2",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "discharge-list",
+          "container": "main > ul",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true
+        },
+        {
+          "name": "discharge-critical",
+          "container": "main > aside",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false
+        }
+      ]
+    }
+  ]
+}

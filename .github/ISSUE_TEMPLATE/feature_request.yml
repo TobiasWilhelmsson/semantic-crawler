@@ -1,0 +1,17 @@
+name: Feature request
+description: Describe a concrete workflow the crawler could improve.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Explain the workflow and current limitation, using public or synthetic examples.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include any compatibility or deployment requirements.
+    validations:
+      required: true

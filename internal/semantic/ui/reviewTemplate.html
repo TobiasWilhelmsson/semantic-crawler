@@ -1,0 +1,93 @@
+{{define "content"}}
+{{$editable := or (eq .Candidate.Status "pending_review") (eq .Candidate.Status "escalated")}}
+<div class="review-hero">
+<strong>{{.Candidate.URL}}</strong> · <span class="{{statusClass .Candidate.Status}}">{{.Candidate.Status}}</span> · skill v{{.Candidate.SkillVersion}} · <a target="_blank" rel="noopener" href="{{.Page.URL}}">Open live page</a>
+<div class="meta">model {{.Candidate.Model}} · prompt {{.Candidate.PromptVersion}} · {{.Candidate.InputTokens}} input / {{.Candidate.OutputTokens}} output tokens · {{.Candidate.LatencyMS}} ms</div>
+</div>
+<div class="review-grid">
+<div class="pane">
+<iframe title="Captured source page" id="source-frame" src="{{$.Base}}/snapshots/{{.Page.ID}}">
+</iframe>
+</div>
+<div class="pane">
+<h2>Extracted output</h2><p><a class="button" href="{{$.Base}}/export?candidate_id={{.Candidate.ID}}">Download this candidate</a></p>{{if $editable}}<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/remove-selected">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">{{end}}
+{{range .Candidate.Sections}}<article class="block" data-block-id="{{.BlockID}}">{{if $editable}}<label>
+<input type="checkbox" name="remove_block_ids" value="{{.BlockID}}"> remove</label>{{end}} <strong>{{.BlockID}} · {{.Role}} · {{.Type}}</strong>
+<div>{{plainText .Content}}</div>
+<details>
+<summary>Source HTML</summary>
+<pre class="source-html">{{.Content}}</pre>
+</details>
+</article>{{else}}<p class="empty">No extracted sections.</p>{{end}}
+{{if $editable}}<p>
+<input name="reviewer" aria-label="Reviewer name" placeholder="Reviewer name"> <input name="comment" aria-label="Reason for removing blocks" placeholder="Reason for removing blocks"> <button class="primary">Remove selected and approve</button>
+</p>
+</form>
+<details>
+<summary>Edit structured sections</summary>
+<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/edit">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<p>
+<input name="reviewer" aria-label="Reviewer name" placeholder="Reviewer name"> <input name="comment" aria-label="Review comment" placeholder="Comment">
+</p>
+<label for="edited-sections">Structured sections (JSON)</label>
+<textarea id="edited-sections" name="sections">{{.SectionsJSON}}</textarea>
+<p>
+<button class="primary">Edit and approve</button>
+</p>
+</form>
+</details>{{else}}<p class="help">This version is read-only. Available actions are shown below.</p>{{end}}</div>
+</div>{{if .HasPrevious}}<section class="panel">
+<strong>Previous approved version</strong>{{if .Changed}} <span class="changed">Changed fields require review</span>{{else}} <span class="muted">No structured changes</span>{{end}}<details>
+<summary>Compare previous JSON</summary>
+<pre class="doc-content">{{.PreviousJSON}}</pre>
+</details>
+</section>{{end}}<section class="panel">
+<h2>Active learned instructions</h2>{{range .Rules}}<div class="rule">
+<code>v{{.Version}} {{.Scope}}</code>
+<span>{{.Instruction}}</span>
+<form method="post" action="{{$.Base}}/rules/{{.ID}}/disable">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<input type="hidden" name="return_to" value="{{$.Base}}/review/{{$.Candidate.ID}}">
+<input name="reviewer" aria-label="Reviewer name" placeholder="Reviewer name">
+<button class="danger">Disable</button>
+</form>
+</div>{{else}}<p class="empty">No active instructions for this page.</p>{{end}}</section>
+<section class="panel">
+<h2>Reviewer actions</h2>{{if eq .Candidate.Status "queued"}}<p>Extraction is queued or its previous attempt failed. Resume it with the saved instructions.</p>
+<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/resume">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<button class="primary">Resume extraction</button>
+</form>{{else if or (eq .Candidate.Status "pending_review") (eq .Candidate.Status "escalated")}}<div class="actions-row">
+<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/approve">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<input name="reviewer" aria-label="Reviewer name" placeholder="Reviewer name">
+<button class="primary">Approve</button>
+</form>{{if eq .Candidate.Status "pending_review"}}<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/escalate">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<button class="warning">Escalate</button>
+</form>{{end}}<form method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/reject">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<button class="danger">Reject</button>
+</form>
+</div>
+<form class="retry" method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/retry">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<h3>Retry with instruction</h3>
+<p class="muted">Default to URL-scoped rules for one-off fixes. Source-scoped rules apply to future pages for this source. Active rules are appended into model prompts; they are not written into the global system prompt.</p>
+<p>
+<input name="reviewer" aria-label="Reviewer name" placeholder="Reviewer name"> <input type="text" name="instruction" aria-label="Retry instruction" required placeholder="e.g. retain every dosage table"> <select name="scope" aria-label="Instruction scope">
+<option value="url">This page only</option>
+<option value="source">All source pages</option>
+</select> <button>Save instruction and queue retry</button>
+</p>
+</form>{{end}}
+{{if eq .Candidate.Status "approved"}}<form class="delivery" method="post" action="{{$.Base}}/review/{{.Candidate.ID}}/deliver">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<h3>Deliver approved payload</h3>
+<label for="delivery-schema">Delivery format</label><select id="delivery-schema" name="delivery_schema"><option value="legacy">Legacy receiver format</option><option value="document-v1">Versioned document v1</option></select>
+<input type="url" name="endpoint" aria-label="Delivery endpoint" required value="http://localhost:8092/approved"> <button>Deliver</button>
+</form>{{end}}</section>
+<script src="/semantic/assets/review.js" defer>
+</script>{{end}}

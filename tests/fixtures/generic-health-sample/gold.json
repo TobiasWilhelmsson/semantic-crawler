@@ -1,0 +1,151 @@
+{
+  "fixture_set": "generic-health-sample",
+  "scope": "Include clinical guidance about airway care, suction preparation, procedure steps, risk monitoring, equipment checks, pressure limits, documentation, discharge teaching, clinical warnings, parameter tables, and instructional media. Exclude cookie notices, global navigation, contact/about pages, search controls, share tools, and unrelated news.",
+  "quality_gates": {
+    "min_discovery_coverage": 1,
+    "min_schema_valid_rate": 1,
+    "min_final_approved_parity": 1,
+    "require_zero_second_crawl_llm": true,
+    "require_approved_only_delivery": true
+  },
+  "pages": [
+    {
+      "url": "https://guidelines.example.test/airway/",
+      "slug": "airway",
+      "route": "navigate_only"
+    },
+    {
+      "url": "https://guidelines.example.test/airway/preparation/",
+      "slug": "preparation",
+      "route": "extract",
+      "sections": [
+        {
+          "block_id": "preparation-title",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Preparation before airway suction"
+        },
+        {
+          "block_id": "preparation-assessment",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Assess breathing pattern, oxygen saturation, patient cooperation, and the indication for suction before equipment is opened."
+        },
+        {
+          "block_id": "preparation-critical",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false,
+          "text": "Critical warning Stop preparation and call for help if oxygen saturation falls below the locally prescribed limit."
+        },
+        {
+          "block_id": "preparation-checklist-heading",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Equipment checklist"
+        },
+        {
+          "block_id": "preparation-equipment",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Working suction unit with prescribed pressure range. Correct catheter size and sterile gloves when required. Oxygen and ventilation equipment available at bedside."
+        },
+        {
+          "block_id": "preparation-table",
+          "role": "table",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Preparation checks Check Required action Pressure Verify prescribed range before patient contact. Monitoring Pulse oximetry must be visible during the procedure."
+        }
+      ]
+    },
+    {
+      "url": "https://guidelines.example.test/airway/suction-procedure/",
+      "slug": "suction-procedure",
+      "route": "extract",
+      "sections": [
+        {
+          "block_id": "procedure-title",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Suction procedure"
+        },
+        {
+          "block_id": "procedure-intro",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Explain the procedure, position the patient, and pre-oxygenate when ordered by local guidance."
+        },
+        {
+          "block_id": "procedure-steps",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Insert the catheter without applying suction. Apply suction only while withdrawing the catheter. Observe breathing, skin colour, pulse, and oxygen saturation throughout."
+        },
+        {
+          "block_id": "procedure-critical",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false,
+          "text": "Do not continue suction if the patient develops severe distress, bradycardia, or rapidly falling oxygen saturation."
+        },
+        {
+          "block_id": "procedure-media",
+          "role": "media",
+          "type": "none",
+          "parse_mode": false,
+          "text": "Instructional film: safe withdrawal technique during airway suction."
+        }
+      ]
+    },
+    {
+      "url": "https://guidelines.example.test/airway/discharge/",
+      "slug": "discharge",
+      "route": "extract",
+      "sections": [
+        {
+          "block_id": "discharge-title",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Discharge teaching after airway suction"
+        },
+        {
+          "block_id": "discharge-intro",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Before discharge, confirm that the patient or caregiver can describe when suction may be needed and when urgent help is required."
+        },
+        {
+          "block_id": "discharge-heading",
+          "role": "header",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Home guidance"
+        },
+        {
+          "block_id": "discharge-list",
+          "role": "content",
+          "type": "none",
+          "parse_mode": true,
+          "text": "Keep equipment clean, dry, and reachable. Document secretion colour, amount, and patient response after suction. Contact care services if secretions suddenly increase or breathing becomes more difficult."
+        },
+        {
+          "block_id": "discharge-critical",
+          "role": "info_box",
+          "type": "critical",
+          "parse_mode": false,
+          "text": "Urgent care is required if breathing difficulty does not improve after suction."
+        }
+      ]
+    }
+  ]
+}

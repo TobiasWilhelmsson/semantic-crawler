@@ -1,0 +1,23 @@
+/bin/
+/data/
+/artifacts/
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+coverage.out
+.DS_Store
+*.scan.writer.lock
+
+/exports/
+/dist/
+/VERSION
+/REVISION
+
+# Source configs and instructions created by the UI/website shortcut stay local.
+/configs/sources/*.json
+!/configs/sources/generic-health-sample.json
+/configs/sources/source-skills/*
+!/configs/sources/source-skills/generic-health-sample.md

@@ -1,0 +1,14 @@
+{
+  "source_id": 2,
+  "name": "Synthetic Airway Care Sample",
+  "seed_url": "https://guidelines.example.test/airway/",
+  "allowed_host": "guidelines.example.test",
+  "allowed_path_prefix": "/airway/",
+  "scope": "Include clinical guidance about airway care, suction preparation, procedure steps, risk monitoring, equipment checks, pressure limits, documentation, discharge teaching, clinical warnings, parameter tables, and instructional media. Exclude cookie notices, global navigation, contact/about pages, search controls, share tools, and unrelated news.",
+  "max_depth": 2,
+  "max_pages": 10,
+  "skill_version": 1,
+  "source_skill_path": "configs/sources/source-skills/generic-health-sample.md",
+  "gold_path": "tests/fixtures/generic-health-sample/gold.json",
+  "fixture_directory": "tests/fixtures/generic-health-sample"
+}

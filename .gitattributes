@@ -1,0 +1,20 @@
+# Source archives contain runnable software and public guidance, not work plans.
+/docs/superpowers export-ignore
+/.superpowers export-ignore
+/.agents export-ignore
+/.codex export-ignore
+/AGENTS.md export-ignore
+
+# Also protect the archive if local generated files were accidentally tracked.
+/.env export-ignore
+/.env.* export-ignore
+/.env.example -export-ignore
+/data export-ignore
+/artifacts export-ignore
+/bin export-ignore
+/dist export-ignore
+/exports export-ignore
+/configs/sources/*.json export-ignore
+/configs/sources/generic-health-sample.json -export-ignore
+/configs/sources/source-skills/* export-ignore
+/configs/sources/source-skills/generic-health-sample.md -export-ignore

@@ -1,0 +1,15 @@
+{{define "content"}}
+<div class="page-title"><div><p class="eyebrow">PORTABLE CONTENT</p><h1>Export selected content</h1><p>Save source-faithful documents without another model call.</p></div></div>
+<section class="panel">
+<form method="get" action="{{.Base}}/export">
+<input type="hidden" name="download" value="1">
+{{if .CandidateID}}<input type="hidden" name="candidate_id" value="{{.CandidateID}}"><p>Download candidate #{{.CandidateID}}.</p>{{else}}<p>Export the latest approved version of each page in this source. Newer unapproved versions are identified in the metadata.</p>{{end}}
+<label for="export-format">File format</label>
+<select name="format" id="export-format"><option value="jsonl">JSONL — one structured document per line</option><option value="json">JSON — structured dataset</option><option value="markdown">Markdown — readable files in a ZIP</option><option value="text">Plain text — simple files in a ZIP</option></select>
+<label for="content-profile">Content profile</label>
+<select name="content_profile" id="content-profile"><option value="complete">Complete — all selected sections</option><option value="legacy">Legacy — saved Markdown inclusion settings</option></select>
+<p><label><input type="checkbox" name="include_unreviewed" value="1"> Include unreviewed content, clearly marked with its status</label></p>
+<p class="help">Review status is preserved. Downloading does not approve or deliver content. Markdown and text bundles include a manifest with source details and conversion warnings. A source without eligible candidates produces an empty export with a zero document count; an empty JSONL export has no lines.</p>
+<button class="primary">Download</button>
+</form></section>
+{{end}}
