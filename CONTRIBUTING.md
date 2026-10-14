@@ -18,6 +18,38 @@ Choose **Offline sample** in the UI. No model key is needed for tests or synthet
 workflows. See [testing](docs/testing.md) for controlled provider responses, fresh
 report directories and the limits of fixture scores.
 
+## Open a pull request
+
+1. Fork [Semantic Crawler](https://github.com/TobiasWilhelmsson/semantic-crawler)
+   into your GitHub account. Clone your fork and create a branch from `main`:
+
+   ```sh
+   git clone https://github.com/YOUR-USERNAME/semantic-crawler.git
+   cd semantic-crawler
+   git remote add upstream https://github.com/TobiasWilhelmsson/semantic-crawler.git
+   git switch -c my-change
+   ```
+
+2. Make a focused change and run the checks above. Include a regression for a
+   behavior fix; use synthetic data and keep paid provider calls out of tests.
+3. Commit your change and push the branch to your fork. Open a pull request from
+   that branch to `TobiasWilhelmsson/semantic-crawler`'s `main` branch. Describe
+   the problem, resulting behavior, verification and compatibility implications.
+4. Address review feedback and wait for the required CI checks and maintainer
+   approval. Draft pull requests are welcome for early discussion.
+
+All files, including the ownership and workflow configuration, are owned by
+[@TobiasWilhelmsson](https://github.com/TobiasWilhelmsson) for review. Contributions
+require one approving review from the maintainer and passing Linux, macOS and
+offline-release checks. New commits dismiss previous approvals. Automatic
+merging is disabled; the maintainer merges accepted changes.
+
+First-time contributors may need the maintainer to approve their workflow run.
+That allows CI to run; it is separate from approving the proposed code.
+
+The maintainer has an explicit review exception so their own pull requests do
+not need a second reviewer. Required CI checks still apply to the maintainer.
+
 ## Package map
 
 - `cmd/semantic-crawler`: CLI, provider configuration, startup and export commands.
