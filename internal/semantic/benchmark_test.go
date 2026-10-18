@@ -302,8 +302,8 @@ func TestReviewerLearningEvidenceKeepsMixedClinicalParagraphWithInlineReference(
 		t.Fatalf("missing clinical paragraph with inline reference should create source-scoped evidence, got %#v", evidence)
 	}
 	prompt := promptForEvidence(evidence[0])
-	if !strings.Contains(strings.ToLower(prompt), "inline") || !strings.Contains(strings.ToLower(prompt), "clinical") {
-		t.Fatalf("prompt should teach mixed clinical/reference paragraph handling, got %q", prompt)
+	if !strings.Contains(strings.ToLower(prompt), "inline") || !strings.Contains(strings.ToLower(prompt), "human baseline") {
+		t.Fatalf("prompt should preserve human-selected mixed content/reference paragraphs, got %q", prompt)
 	}
 }
 

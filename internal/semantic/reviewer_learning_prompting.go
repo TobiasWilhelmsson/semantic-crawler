@@ -21,7 +21,7 @@ func reviewerLearningPromptFromEvidenceWithBlocks(url string, gold, actual []Ben
 		}
 		return prompt, evidence.Scope, evidence.Category
 	}
-	prompt := fmt.Sprintf("For this page only: compare %s against the human selector baseline and include the remaining missing clinical source blocks while dropping only non-clinical UI boilerplate.", url)
+	prompt := fmt.Sprintf("For this page only: compare %s against the human selector baseline and include the remaining source blocks selected by the human baseline while dropping only standalone UI boilerplate absent from that baseline.", url)
 	if !used[prompt] {
 		return prompt, RuleScopeURL, "page_specific_remaining_mismatch"
 	}
@@ -72,7 +72,7 @@ func reviewerLearningEvidenceWithBlocks(gold, actual []BenchmarkSection, blocks 
 		risky := false
 		snippet := reviewerLearningSnippet(expected.Text)
 		switch {
-		case clinicalParagraphWithInlineReference(expected.Text):
+		case paragraphWithInlineReference(expected.Text):
 			category = "missing_mixed_clinical_reference"
 			scope = RuleScopeSource
 		case expected.Type == TypeCritical:
@@ -109,10 +109,10 @@ func reviewerLearningEvidenceWithBlocks(gold, actual []BenchmarkSection, blocks 
 		evidence = append(evidence, extraActualEvidence(gold, actual)...)
 	}
 	if metrics.CriticalRecall < 1 && !hasEvidenceCategory(evidence, "missing_warning_info_box") && !hasEvidenceCategory(evidence, "critical_type_mismatch") {
-		evidence = append(evidence, reviewerLearningPromptEvidence{Category: "missing_warning_info_box", Snippet: "clinical warning or information box", Scope: RuleScopeSource, Risky: true})
+		evidence = append(evidence, reviewerLearningPromptEvidence{Category: "missing_warning_info_box", Snippet: "critical notice or information box selected by the human baseline", Scope: RuleScopeSource, Risky: true})
 	}
 	if metrics.TableRecall < 1 && !hasEvidenceCategory(evidence, "missing_table") {
-		evidence = append(evidence, reviewerLearningPromptEvidence{Category: "missing_table", Snippet: "clinical table", Scope: RuleScopeSource, Risky: true})
+		evidence = append(evidence, reviewerLearningPromptEvidence{Category: "missing_table", Snippet: "table selected by the human baseline", Scope: RuleScopeSource, Risky: true})
 	}
 	return evidence
 }
@@ -155,40 +155,40 @@ func promptForEvidence(evidence reviewerLearningPromptEvidence) string {
 	if evidence.Scope == RuleScopeSource {
 		switch evidence.Category {
 		case "missing_mixed_clinical_reference":
-			return "For this source: keep paragraphs that contain primary clinical assessment, treatment, action, or care instructions even when the same paragraph also contains inline Läs mer/reference links. Drop only standalone related-link cards or pure navigation link blocks."
+			return "For this source: keep substantive paragraphs selected by the human baseline even when the same paragraph also contains inline Läs mer/reference links. Drop only standalone related-link cards or pure navigation link blocks absent from the baseline."
 		case "critical_type_mismatch":
-			return "For this source: highlighted clinical warning/info boxes that describe clinical risk, deterioration, late danger signs, thresholds, urgent action, contraindications, dosage limits, or patient-risk information must be labeled as type=critical, even when the wording does not use explicit emergency verbs."
+			return "For this source: preserve type=critical on notices and warning/info boxes identified as critical by the human baseline, including deadlines, prohibitions, exceptions, and required actions."
 		case "missing_warning_info_box":
-			return "For this source: keep highlighted warning/info boxes when they contain clinical safety instructions, contraindications, dosage limits, urgent-care advice, patient-risk information, or other clinical instructions. Label urgent safety, contraindication, dosage-limit, and patient-risk boxes as type=critical."
+			return "For this source: keep highlighted warning/info boxes and other critical notices selected by the human baseline. Preserve their text, deadlines, exceptions, and required actions, and use type=critical where the baseline does."
 		case "missing_table":
-			return "For this source: keep every dosage, parameter, equipment, observation, or clinical instruction table exactly as shown."
+			return "For this source: keep every table selected by the human baseline exactly as shown, including headings, values, units, and row/column relationships."
 		case "missing_media":
-			return "For this source: keep clinical images, figures, videos, captions, and media references when the human baseline includes instructional media."
+			return "For this source: keep images, figures, videos, captions, and media references selected by the human baseline."
 		case "missing_metadata":
 			return "For this source: keep article metadata such as approved date, author, reviewer, fact reviewer, illustrator, photographer, and source owner when present."
 		case "missing_breadcrumb":
 			return "For this source: keep breadcrumb/topic path blocks when they are part of the human baseline, but do not include global navigation menus."
 		case "extra_boilerplate":
-			return "For this source: drop blocks containing share, print, copy-link, email, navigation, pure related-link text, or related-card UI unless the block itself contains clinical instructions."
+			return "For this source: drop only standalone share, print, copy-link, email, navigation, or related-card UI absent from the human baseline. Preserve mixed blocks containing substantive source content."
 		default:
-			return "For this source: preserve repeated Sample Source article content patterns that are part of the human baseline, while dropping non-clinical UI boilerplate."
+			return "For this source: preserve source content patterns selected by the human baseline, while dropping only standalone UI boilerplate absent from the baseline."
 		}
 	}
 	switch evidence.Category {
 	case "critical_type_mismatch":
-		return fmt.Sprintf("%s: keep the already included highlighted clinical warning/info block but label it as type=critical.%s The text that must be critical is: %q.", target, blockHint, evidence.Snippet)
+		return fmt.Sprintf("%s: keep the already included source block but label it as type=critical to match the human baseline.%s The text that must be critical is: %q.", target, blockHint, evidence.Snippet)
 	case "missing_warning_info_box":
-		return fmt.Sprintf("%s: keep highlighted warning/info boxes with clinical safety, contraindication, dosage-limit, urgent-care, or patient-risk content and label those safety boxes as type=critical.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
+		return fmt.Sprintf("%s: keep the critical notice or warning/info block selected by the human baseline, preserving deadlines, exceptions, and required actions, and mark that block as type=critical.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
 	case "missing_table":
-		return fmt.Sprintf("%s: keep every dosage, parameter, equipment, observation, or clinical instruction table exactly as shown.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
+		return fmt.Sprintf("%s: keep every table selected by the human baseline exactly as shown, including headings, values, units, and row/column relationships.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
 	case "missing_media":
-		return fmt.Sprintf("%s: keep clinical images, figures, videos, and media references when the human baseline includes them.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
+		return fmt.Sprintf("%s: keep images, figures, videos, and media references selected by the human baseline.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
 	case "missing_metadata":
 		return fmt.Sprintf("%s: keep article metadata such as approved date, author, reviewer, fact reviewer, illustrator, photographer, and source owner.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
 	case "missing_breadcrumb":
 		return fmt.Sprintf("%s: keep breadcrumb/topic path blocks when they are part of the human baseline, but do not include global navigation menus.%s Include source blocks containing: %q.", target, blockHint, evidence.Snippet)
 	case "extra_boilerplate":
-		return fmt.Sprintf("For this source: drop blocks containing share, print, copy-link, email, navigation, or related-card UI unless they contain clinical instructions. Extra text seen: %q.", evidence.Snippet)
+		return fmt.Sprintf("For this source: drop only standalone share, print, copy-link, email, navigation, or related-card UI absent from the human baseline. Preserve mixed blocks containing substantive source content. Extra text seen: %q.", evidence.Snippet)
 	default:
 		return fmt.Sprintf("For this page only:%s include the source block containing %q because it is part of the human selector baseline.", blockHint, evidence.Snippet)
 	}
@@ -247,13 +247,7 @@ func extraActualEvidence(gold, actual []BenchmarkSection) []reviewerLearningProm
 		if bestBenchmarkOverlap(candidate, gold) >= 0.8 {
 			continue
 		}
-		lower := strings.ToLower(candidate.Text)
-		if strings.Contains(lower, "läs mer") ||
-			strings.Contains(lower, "skriv ut") ||
-			strings.Contains(lower, "kopiera") ||
-			strings.Contains(lower, "tipsa") ||
-			strings.Contains(lower, "relaterad information") ||
-			strings.Contains(lower, "länk till") {
+		if isPureSelectorBoilerplate(candidate) {
 			evidence = append(evidence, reviewerLearningPromptEvidence{Category: "extra_boilerplate", Snippet: reviewerLearningSnippet(candidate.Text), Scope: RuleScopeSource})
 		}
 	}
@@ -279,31 +273,35 @@ func reviewerLearningSnippet(text string) string {
 
 func reviewerLearningPromptFamily(prompt string) string {
 	switch {
-	case strings.Contains(prompt, "label it as type=critical"):
+	case strings.Contains(prompt, "label it as type=critical") || strings.Contains(prompt, "preserve type=critical"):
 		return "critical_type_mismatch"
 	case strings.Contains(prompt, "inline Läs mer/reference links"):
 		return "missing_mixed_clinical_reference"
-	case strings.Contains(prompt, "warning/info boxes"):
+	case strings.Contains(prompt, "warning/info boxes") || strings.Contains(prompt, "critical notice or warning/info block"):
 		return "missing_warning_info_box"
-	case strings.Contains(prompt, "dosage, parameter"):
+	case strings.Contains(prompt, "dosage, parameter") || strings.Contains(prompt, "keep every table"):
 		return "missing_table"
-	case strings.Contains(prompt, "clinical images"):
+	case strings.Contains(prompt, "clinical images") || strings.Contains(prompt, "keep images"):
 		return "missing_media"
 	case strings.Contains(prompt, "article metadata"):
 		return "missing_metadata"
 	case strings.Contains(prompt, "breadcrumb/topic path"):
 		return "missing_breadcrumb"
-	case strings.Contains(prompt, "drop blocks containing"):
+	case strings.Contains(prompt, "drop blocks containing") || strings.Contains(prompt, "drop only standalone"):
 		return "extra_boilerplate"
 	default:
 		return "page_specific_content"
 	}
 }
 
-func clinicalParagraphWithInlineReference(text string) bool {
-	lower := strings.ToLower(text)
-	if !strings.Contains(lower, "läs mer") && !strings.Contains(lower, "sample") && !strings.Contains(lower, "vårdhandboken") {
-		return false
+// Keep the historical report category for compatibility, but identify mixed
+// reference paragraphs from their structure rather than medical vocabulary.
+func paragraphWithInlineReference(text string) bool {
+	lower := strings.ToLower(normalizeText(text))
+	for _, marker := range []string{"läs mer", "read more"} {
+		if index := strings.Index(lower, marker); index > 0 && strings.TrimSpace(lower[:index]) != "" {
+			return true
+		}
 	}
-	return containsClinicalSignal(lower)
+	return false
 }

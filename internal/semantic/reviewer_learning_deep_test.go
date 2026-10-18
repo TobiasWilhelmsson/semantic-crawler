@@ -1837,10 +1837,10 @@ func TestRepairReviewerLearningReportGeneralizesLegacySourceScopedSnippetRules(t
 	if got := repaired.Rules[0].Instruction; strings.Contains(got, "Larma enligt") || strings.Contains(got, "Include source blocks containing") || !strings.Contains(got, "keep highlighted warning/info boxes") {
 		t.Fatalf("source warning rule should be generalized, got %q", got)
 	}
-	if got := repaired.Rules[1].Instruction; strings.Contains(got, "block_id") || !strings.Contains(got, "keep clinical images") {
+	if got := repaired.Rules[1].Instruction; strings.Contains(got, "block_id") || !strings.Contains(got, "keep images") {
 		t.Fatalf("source media rule should be generalized without exact block ids, got %q", got)
 	}
-	if got := repaired.Rules[2].Instruction; strings.Contains(got, "Denna text gäller vuxna") || strings.Contains(got, "Extra text pattern") || !strings.Contains(got, "drop share, print") {
+	if got := repaired.Rules[2].Instruction; strings.Contains(got, "Denna text gäller vuxna") || strings.Contains(got, "Extra text pattern") || !strings.Contains(got, "drop only standalone share, print") {
 		t.Fatalf("source extra-text rule should be generalized without exact snippets, got %q", got)
 	}
 	if got := repaired.Rules[3].Instruction; !strings.Contains(got, "block_id values") {

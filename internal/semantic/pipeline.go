@@ -1,6 +1,7 @@
 package semantic
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html/charset"
 )
 
 type FetchResult struct {
@@ -97,6 +99,20 @@ func (fetcher *HTTPFetcher) Fetch(ctx context.Context, url string) (FetchResult,
 			if response.StatusCode < 200 || response.StatusCode >= 300 {
 				return last, fmt.Errorf("source returned HTTP %d", response.StatusCode)
 			}
+			if len(body) == 0 {
+				return last, nil
+			}
+			decoded, err := charset.NewReader(bytes.NewReader(body), response.Header.Get("Content-Type"))
+			if err != nil {
+				return FetchResult{}, fmt.Errorf("decode HTML from %s: %w", url, err)
+			}
+			// Character decoding can expand the response. Bound both the received
+			// body above and its UTF-8 representation before storing or parsing it.
+			utf8Body, err := readBoundedResponse(decoded, limit)
+			if err != nil {
+				return FetchResult{}, fmt.Errorf("decode HTML from %s: %w", url, err)
+			}
+			last.HTML = string(utf8Body)
 			return last, nil
 		}
 		delay := fetcher.retryDelay(response)
@@ -524,9 +540,10 @@ func harvestLinks(html, pageURL, allowedHost string) ([]string, error) {
 	}
 	seen := make(map[string]struct{})
 	var links []string
+	baseURL := documentBaseURL(doc, pageURL)
 	doc.Find("a[href]").Each(func(_ int, selection *goquery.Selection) {
 		href, _ := selection.Attr("href")
-		canonical, canonicalErr := CanonicalizeURL(pageURL, href, allowedHost)
+		canonical, canonicalErr := CanonicalizeURL(baseURL, href, allowedHost)
 		if canonicalErr != nil {
 			return
 		}
@@ -576,17 +593,26 @@ func blocksText(blocks []CandidateBlock, limit int) string {
 }
 
 func sectionsFromDecisions(blocks []CandidateBlock, decisions []BlockDecision) []Section {
-	byID := make(map[string]CandidateBlock, len(blocks))
-	for _, block := range blocks {
-		byID[block.ID] = block
+	decisionsByID := make(map[string]BlockDecision, len(decisions))
+	for _, decision := range decisions {
+		decisionsByID[decision.BlockID] = decision
 	}
 	var sections []Section
-	for _, decision := range decisions {
+	// Models select and classify; source order remains authoritative.
+	for _, block := range blocks {
+		decision := decisionsByID[block.ID]
 		if !decision.Include {
 			continue
 		}
-		block := byID[decision.BlockID]
-		sections = append(sections, Section{BlockID: block.ID, Name: block.ID, Role: decision.Role, Type: decision.Type, ParseMode: decision.ParseMode, Content: block.HTML, Locator: block.Locator})
+		sections = append(sections, Section{
+			BlockID:   block.ID,
+			Name:      block.ID,
+			Role:      decision.Role,
+			Type:      decision.Type,
+			ParseMode: decision.ParseMode,
+			Content:   block.HTML,
+			Locator:   block.Locator,
+		})
 	}
 	return sections
 }

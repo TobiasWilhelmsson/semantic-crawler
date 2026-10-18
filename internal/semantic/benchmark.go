@@ -108,22 +108,16 @@ func isPureSelectorBoilerplate(section BenchmarkSection) bool {
 	if text == "" {
 		return true
 	}
-	boilerplateSignals := []string{"tipsa & dela", "kopiera länk", "skriv ut sidan", "dela via mejl"}
-	for _, signal := range boilerplateSignals {
-		if strings.Contains(text, signal) {
-			return !containsClinicalSignal(text)
+	// Strip only complete known control labels. Any remaining wording may be
+	// substantive human-selected content, regardless of the site's subject.
+	matched := false
+	for _, label := range []string{"tipsa & dela artikeln", "tipsa & dela", "kopiera länk", "skriv ut sidan", "dela via mejl"} {
+		if strings.Contains(text, label) {
+			matched = true
+			text = strings.ReplaceAll(text, label, " ")
 		}
 	}
-	return false
-}
-
-func containsClinicalSignal(text string) bool {
-	for _, signal := range []string{"patient", "dos", "risk", "behandling", "vård", "symtom", "läkemedel", "andning", "cirkulation", "smärta", "infektion"} {
-		if strings.Contains(text, signal) {
-			return true
-		}
-	}
-	return false
+	return matched && strings.TrimFunc(text, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) || r == '|' }) == ""
 }
 
 type PageBenchmark struct {

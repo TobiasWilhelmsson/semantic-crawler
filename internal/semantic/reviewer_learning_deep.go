@@ -83,9 +83,6 @@ func RunDeepReviewerLearningBenchmark(ctx context.Context, options ReviewerLearn
 			if report.FixtureSet != "" && report.FixtureSet != options.FixtureSet {
 				return report, fmt.Errorf("reviewer learning report in %s belongs to fixture_set %q, not %q", options.ReportDirectory, report.FixtureSet, options.FixtureSet)
 			}
-			if reviewerLearningReportHasContent(report) && report.ImplementationVersion != ReviewerLearningImplementationVersion {
-				return report, fmt.Errorf("reviewer learning report in %s has implementation version %q, expected %q; use force to start a clean proof run instead of mixing old and new benchmark semantics", options.ReportDirectory, report.ImplementationVersion, ReviewerLearningImplementationVersion)
-			}
 			if err := validateReviewerLearningResume(report, inputIdentity, mapping, options.ReportDirectory); err != nil {
 				return report, err
 			}
@@ -212,6 +209,7 @@ func reviewerLearningInputIdentity(options ReviewerLearningOptions, mapping Gold
 	}
 	inputs := struct {
 		Version              int
+		ExtractionVersion    string
 		LearningMode         ReviewerLearningMode
 		ModelMode            string
 		ModelConfig          *OpenAIConfig
@@ -231,11 +229,26 @@ func reviewerLearningInputIdentity(options ReviewerLearningOptions, mapping Gold
 		StallWindow          int
 		MinImprovement       float64
 	}{
-		Version: 1, LearningMode: learningMode, ModelMode: reviewerLearningModelMode(options.ModelMode), ModelConfig: modelConfig,
-		Mapping: mapping, Overrides: overrides, FixtureDirectory: fixtureDirectory, LiveFetch: options.LiveFetch, LiveFallback: options.Fetcher != nil,
-		Scope: options.Scope, SourceSkill: options.SourceSkill, QualityThreshold: options.QualityThreshold, ReviewReadyThreshold: options.ReviewReadyThreshold,
-		AdaptiveStop: options.AdaptiveStop, MinPages: options.MinPages, StableStreak: options.StableStreak,
-		MaxReviewerTurns: options.MaxReviewerTurns, StallWindow: options.StallWindow, MinImprovement: options.MinImprovement,
+		Version:              2,
+		ExtractionVersion:    ExtractionVersion,
+		LearningMode:         learningMode,
+		ModelMode:            reviewerLearningModelMode(options.ModelMode),
+		ModelConfig:          modelConfig,
+		Mapping:              mapping,
+		Overrides:            overrides,
+		FixtureDirectory:     fixtureDirectory,
+		LiveFetch:            options.LiveFetch,
+		LiveFallback:         options.Fetcher != nil,
+		Scope:                options.Scope,
+		SourceSkill:          options.SourceSkill,
+		QualityThreshold:     options.QualityThreshold,
+		ReviewReadyThreshold: options.ReviewReadyThreshold,
+		AdaptiveStop:         options.AdaptiveStop,
+		MinPages:             options.MinPages,
+		StableStreak:         options.StableStreak,
+		MaxReviewerTurns:     options.MaxReviewerTurns,
+		StallWindow:          options.StallWindow,
+		MinImprovement:       options.MinImprovement,
 	}
 	encoded, err := json.Marshal(inputs)
 	if err != nil {
@@ -245,6 +258,9 @@ func reviewerLearningInputIdentity(options ReviewerLearningOptions, mapping Gold
 }
 
 func validateReviewerLearningResume(report ReviewerLearningReport, identity string, mapping GoldMapping, directory string) error {
+	if reviewerLearningReportHasContent(report) && report.ImplementationVersion != ReviewerLearningImplementationVersion {
+		return fmt.Errorf("reviewer learning report in %s has implementation version %q, expected %q; use a different report directory for a fresh run", directory, report.ImplementationVersion, ReviewerLearningImplementationVersion)
+	}
 	if reviewerLearningReportHasContent(report) && (report.InputIdentity == "" || report.InputIdentity != identity) {
 		return fmt.Errorf("reviewer learning report in %s has missing or incompatible input identity; use a different report directory for a fresh run", directory)
 	}
@@ -581,7 +597,7 @@ func reviewerLearningOraclePrompt(url string, gold, actual []BenchmarkSection, b
 	if len(ids) == 0 {
 		return "", false
 	}
-	prompt := fmt.Sprintf("For this page only: final reviewer correction for %s. Include these exact missing source block_id values with include=true: %s. Keep existing correct clinical content, and drop only non-clinical UI boilerplate.", url, strings.Join(ids, ", "))
+	prompt := fmt.Sprintf("For this page only: final reviewer correction for %s. Include these exact missing source block_id values with include=true: %s. Keep existing source content selected by the human baseline, and drop only standalone UI boilerplate absent from that baseline.", url, strings.Join(ids, ", "))
 	if used[prompt] {
 		return "", false
 	}
