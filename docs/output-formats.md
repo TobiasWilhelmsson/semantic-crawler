@@ -59,7 +59,16 @@ Read-only exports do not migrate storage or regenerate saved Markdown. An explic
 
 Choose **Re-extract unchanged pages** in the scan form or add `-force-reextract` to a CLI scan to deliberately rerun selection. Startup and exporting never launch this work automatically. New candidates require review; old approvals are preserved.
 
-The extraction schema no longer asks the model to set `parse_mode`; that field remains readable in older saved sections and compatibility exports. Reviewer-learning report version v22 separates the changed prompting/schema behavior from old checkpoints; use a fresh report directory. Old benchmark figures describe their recorded evaluator and are not silently recomputed under new semantics.
+The extraction schema no longer asks the model to set `parse_mode`; that field
+remains readable in older saved sections and compatibility exports. Extraction
+identity v3 includes the source-order, encoding and preformatted-content fixes,
+so the next requested scan reprocesses older cached pages without replacing
+approvals.
+
+Reviewer-learning report version v23 separates the updated source-neutral
+feedback and baseline normalization from old checkpoints; use a fresh report
+directory. Old benchmark figures describe their recorded evaluator and are not
+silently recomputed under new semantics.
 
 ## Conversion and local filesystem limits
 
