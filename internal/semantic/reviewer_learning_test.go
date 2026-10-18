@@ -32,7 +32,7 @@ func (model *stagedLearningModel) Extract(ctx context.Context, prompt string, bl
 	model.extracts++
 	decisions := make([]BlockDecision, 0, len(blocks))
 	includeWarning := strings.Contains(prompt, "keep highlighted warning")
-	includeTable := strings.Contains(prompt, "keep every dosage")
+	includeTable := strings.Contains(prompt, "keep every table")
 	for _, block := range blocks {
 		text := strings.ToLower(block.Text)
 		include := strings.HasPrefix(text, "title")
@@ -391,7 +391,7 @@ func TestReviewerLearningRecordsMultipleReviewerTurnsForOnePage(t *testing.T) {
 	if !strings.Contains(page.ReviewerTurnDetails[0].Prompt, "keep highlighted warning") {
 		t.Fatalf("first turn should teach warning handling: %#v", page.ReviewerTurnDetails)
 	}
-	if !strings.Contains(page.ReviewerTurnDetails[1].Prompt, "keep every dosage") {
+	if !strings.Contains(page.ReviewerTurnDetails[1].Prompt, "keep every table") {
 		t.Fatalf("second turn should teach table handling: %#v", page.ReviewerTurnDetails)
 	}
 	if page.FinalApprovalMethod != ReviewerLearningApprovalNewReviewerPrompt || page.FinalApproved.Metrics.RelevantTextF1 != 1 {

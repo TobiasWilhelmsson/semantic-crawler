@@ -33,7 +33,7 @@ const (
 	ReviewerLearningModeDeep     ReviewerLearningMode = "deep"
 )
 
-const ReviewerLearningImplementationVersion = "semantic-reviewer-learning-deep-v22-domain-neutral-extraction"
+const ReviewerLearningImplementationVersion = "semantic-reviewer-learning-deep-v23-source-fidelity"
 
 type ReviewerLearningRunStatus string
 
@@ -326,6 +326,7 @@ func RunReviewerLearningBenchmark(ctx context.Context, options ReviewerLearningO
 		report.StartedAt = time.Now().UTC()
 	}
 	report.FixtureSet = options.FixtureSet
+	report.ImplementationVersion = ReviewerLearningImplementationVersion
 	report.InputIdentity = inputIdentity
 	report.ModelMode = reviewerLearningModelMode(options.ModelMode)
 	report.RunID = lock.RunID
@@ -762,7 +763,7 @@ func generalizedSourceRuleInstruction(instruction string) string {
 	case "missing_breadcrumb":
 		return promptForEvidence(reviewerLearningPromptEvidence{Category: "missing_breadcrumb", Scope: RuleScopeSource})
 	case "extra_boilerplate":
-		return "For this source: drop share, print, copy-link, email, global navigation, and related-card UI unless the block itself contains clinical instructions."
+		return promptForEvidence(reviewerLearningPromptEvidence{Category: "extra_boilerplate", Scope: RuleScopeSource})
 	default:
 		return promptForEvidence(reviewerLearningPromptEvidence{Category: "repeated_source_pattern", Scope: RuleScopeSource})
 	}
@@ -1185,13 +1186,13 @@ type reviewerLearningPromptCandidate struct {
 func generateReviewerLearningPromptAvoiding(url string, gold, actual []BenchmarkSection, metrics BenchmarkMetrics, used map[string]bool) (string, RuleScope) {
 	var candidates []reviewerLearningPromptCandidate
 	if hasGoldCritical(gold) && metrics.CriticalRecall < 1 {
-		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: keep highlighted warning, observe, attention, and information boxes when they contain clinical safety instructions, contraindications, dosage limits, urgent-care advice, or patient-risk information. Label urgent safety, contraindication, dosage-limit, and patient-risk boxes as type=critical.", RuleScopeSource})
+		candidates = append(candidates, reviewerLearningPromptCandidate{promptForEvidence(reviewerLearningPromptEvidence{Category: "missing_warning_info_box", Scope: RuleScopeSource}), RuleScopeSource})
 	}
 	if hasGoldRole(gold, RoleTable) && metrics.TableRecall < 1 {
-		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: keep every dosage, parameter, observation, equipment, or clinical instruction table exactly as shown.", RuleScopeSource})
+		candidates = append(candidates, reviewerLearningPromptCandidate{promptForEvidence(reviewerLearningPromptEvidence{Category: "missing_table", Scope: RuleScopeSource}), RuleScopeSource})
 	}
 	if hasGoldMedia(gold) && metrics.MediaRecall < 1 {
-		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: keep clinical images, figures, videos, and media blocks when the human baseline includes them.", RuleScopeSource})
+		candidates = append(candidates, reviewerLearningPromptCandidate{promptForEvidence(reviewerLearningPromptEvidence{Category: "missing_media", Scope: RuleScopeSource}), RuleScopeSource})
 	}
 	if containsGoldText(gold, "du är här") || containsGoldText(gold, "sample") && containsGoldText(gold, "start") {
 		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: keep breadcrumb/topic path blocks when they are part of the human baseline, but do not include global navigation menus.", RuleScopeSource})
@@ -1200,15 +1201,15 @@ func generateReviewerLearningPromptAvoiding(url string, gold, actual []Benchmark
 		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: keep article metadata such as approved date, author, reviewer, fact reviewer, illustrator, photographer, and source owner when visible in the article body/footer.", RuleScopeSource})
 	}
 	if containsActualAny(actual, []string{"läs mer i vårdhandboken", "tipsa & dela", "kopiera länk", "skriv ut sidan"}) || metrics.RelevantTextPrecision < 0.98 {
-		candidates = append(candidates, reviewerLearningPromptCandidate{"For this source: drop 'Läs mer i Sample Source' related-link cards, share controls, print controls, email controls, and copy-link controls unless the block itself contains clinical instructions.", RuleScopeSource})
+		candidates = append(candidates, reviewerLearningPromptCandidate{promptForEvidence(reviewerLearningPromptEvidence{Category: "extra_boilerplate", Scope: RuleScopeSource}), RuleScopeSource})
 	}
-	candidates = append(candidates, reviewerLearningPromptCandidate{fmt.Sprintf("For this page only: review %s against the human selector baseline and keep the missing page-specific clinical content without applying this instruction to other pages.", url), RuleScopeURL})
+	candidates = append(candidates, reviewerLearningPromptCandidate{fmt.Sprintf("For this page only: review %s against the human selector baseline and keep the missing page-specific source content without applying this instruction to other pages.", url), RuleScopeURL})
 	for _, candidate := range candidates {
 		if used == nil || !used[candidate.prompt] {
 			return candidate.prompt, candidate.scope
 		}
 	}
-	return fmt.Sprintf("For this page only: additional review turn for %s. Compare the remaining mismatch to the human selector baseline and keep only the still-missing page-specific clinical content.", url), RuleScopeURL
+	return fmt.Sprintf("For this page only: additional review turn for %s. Compare the remaining mismatch to the human selector baseline and keep only the still-missing page-specific source content.", url), RuleScopeURL
 }
 
 func hasGoldCritical(gold []BenchmarkSection) bool {

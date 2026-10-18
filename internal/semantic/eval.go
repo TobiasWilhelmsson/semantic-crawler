@@ -276,13 +276,13 @@ func (*evalDeliveryClient) Send(_ context.Context, _ string, _ DeliveryPayload) 
 func simulatedInstruction(page PageBenchmark) string {
 	var parts []string
 	if page.Metrics.CriticalRecall < 1 {
-		parts = append(parts, "retain all critical warning/info boxes")
+		parts = append(parts, "retain all critical notices and warning/info boxes selected by the human baseline")
 	}
 	if page.Metrics.TableRecall < 1 {
-		parts = append(parts, "retain every clinical table")
+		parts = append(parts, "retain every table selected by the human baseline")
 	}
 	if page.Metrics.MediaRecall < 1 {
-		parts = append(parts, "retain media references with clinical meaning")
+		parts = append(parts, "retain media references selected by the human baseline")
 	}
 	if len(parts) == 0 {
 		parts = append(parts, "align section roles and include all relevant source blocks")

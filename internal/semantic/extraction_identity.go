@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-const ExtractionVersion = "semantic-crawler-v2-domain-neutral"
+const ExtractionVersion = "semantic-crawler-v3-source-fidelity"
 
 // extractionIdentity describes content-affecting inputs, never credentials or
 // operational limits. Hash the complete instruction content even when callers

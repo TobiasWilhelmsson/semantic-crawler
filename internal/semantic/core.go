@@ -49,6 +49,7 @@ func BuildCandidateBlocks(reader io.Reader, pageURL string) ([]CandidateBlock, s
 	if err != nil {
 		return nil, "", fmt.Errorf("parse HTML: %w", err)
 	}
+	baseURL := documentBaseURL(doc, pageURL)
 	embeddedBlocks := embeddedPreloadedContentBlocks(doc)
 	doc.Find("script, style, form, noscript, template, svg, [hidden], [aria-hidden='true']").Remove()
 	doc.Find("nav").Each(func(_ int, selection *goquery.Selection) {
@@ -82,7 +83,7 @@ func BuildCandidateBlocks(reader io.Reader, pageURL string) ([]CandidateBlock, s
 	})
 	appendEmbeddedCandidateBlocks(&blocks, root, embeddedBlocks)
 
-	makeAssetURLsAbsolute(doc, pageURL)
+	makeAssetURLsAbsolute(doc, baseURL)
 	// Blocks are copied before the snapshot is rendered. Resolve their URLs as
 	// well so review exports and delivered Markdown do not depend on a receiver's
 	// base URL. This includes content recovered from embedded source data.
@@ -91,7 +92,7 @@ func BuildCandidateBlocks(reader io.Reader, pageURL string) ([]CandidateBlock, s
 		if err != nil {
 			return nil, "", fmt.Errorf("parse candidate HTML: %w", err)
 		}
-		makeAssetURLsAbsolute(fragment, pageURL)
+		makeAssetURLsAbsolute(fragment, baseURL)
 		blocks[index].HTML, err = fragment.Find("body").Html()
 		if err != nil {
 			return nil, "", fmt.Errorf("render candidate HTML: %w", err)
@@ -293,11 +294,35 @@ func appendCandidateBlock(blocks *[]CandidateBlock, selection *goquery.Selection
 	})
 }
 
+// The first base href applies to all relative references, even when it points
+// outside crawl scope. Scope validation happens after resolving each crawl URL.
+func documentBaseURL(doc *goquery.Document, pageURL string) string {
+	base, err := url.Parse(pageURL)
+	if err != nil {
+		return pageURL
+	}
+	href, exists := doc.Find("base[href]").First().Attr("href")
+	if !exists {
+		return pageURL
+	}
+	reference, err := url.Parse(strings.TrimSpace(href))
+	if err != nil {
+		return pageURL
+	}
+	resolved := base.ResolveReference(reference)
+	if resolved.Scheme != "http" && resolved.Scheme != "https" {
+		return pageURL
+	}
+	return resolved.String()
+}
+
 func makeAssetURLsAbsolute(doc *goquery.Document, pageURL string) {
 	base, err := url.Parse(pageURL)
 	if err != nil {
 		return
 	}
+	// Do not resolve a relative base against itself a second time in snapshots.
+	doc.Find("base[href]").SetAttr("href", pageURL)
 	for _, attribute := range []string{"href", "src", "poster"} {
 		doc.Find("[" + attribute + "]").Each(func(_ int, selection *goquery.Selection) {
 			value, exists := selection.Attr(attribute)
@@ -322,7 +347,7 @@ func ContentHash(blocks []CandidateBlock) string {
 			continue
 		}
 		for _, node := range doc.Nodes {
-			hashContentNode(hasher, node)
+			hashContentNode(hasher, node, false)
 		}
 	}
 	return hex.EncodeToString(hasher.Sum(nil))
@@ -330,10 +355,17 @@ func ContentHash(blocks []CandidateBlock) string {
 
 // Text belongs to its element: flattened text alone cannot distinguish, for
 // example, a value moving between otherwise identical table cells.
-func hashContentNode(writer io.Writer, node *html.Node) {
+func hashContentNode(writer io.Writer, node *html.Node, preserveWhitespace bool) {
+	if node.Type == html.ElementNode && (node.Data == "pre" || node.Data == "code" || node.Data == "textarea") {
+		preserveWhitespace = true
+	}
 	switch node.Type {
 	case html.TextNode:
-		if text := normalizeText(node.Data); text != "" {
+		text := node.Data
+		if !preserveWhitespace {
+			text = normalizeText(text)
+		}
+		if text != "" {
 			_, _ = fmt.Fprintf(writer, "text:%q\x00", text)
 		}
 	case html.ElementNode:
@@ -349,7 +381,7 @@ func hashContentNode(writer io.Writer, node *html.Node) {
 		}
 	}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		hashContentNode(writer, child)
+		hashContentNode(writer, child, preserveWhitespace)
 	}
 	if node.Type == html.ElementNode {
 		_, _ = fmt.Fprintf(writer, "close:%s\x00", node.Data)

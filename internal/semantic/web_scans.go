@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +15,7 @@ type scanMode struct {
 	Value, Label, Reason string
 	Ready                bool
 }
+
 type scanForm struct {
 	ForceReextract                              bool
 	Fetch                                       FetchSettings
@@ -84,7 +86,7 @@ func registerScanRoutes(router *gin.Engine, options ReviewRouterOptions, csrf fu
 			}
 			code = 500
 			form.Error = "Unable to start the scan. Check source storage and model configuration."
-			if errors.Is(err, ErrScanBusy) || errors.Is(err, ErrScanRequestConflict) {
+			if errors.Is(err, ErrScanBusy) || errors.Is(err, ErrScanRequestConflict) || errors.Is(err, ErrScanFinalizationPending) {
 				code = 409
 				form.Error = err.Error()
 			}
@@ -109,6 +111,9 @@ func registerScanRoutes(router *gin.Engine, options ReviewRouterOptions, csrf fu
 		if err != nil && !errors.Is(err, ErrWorkspaceEmpty) {
 			c.String(500, "Scan history is unavailable.")
 			return
+		}
+		for i := range runs {
+			runs[i] = scanRunForDisplay(runs[i], entry.Slug, options.Scans)
 		}
 		writePage(c, "Scans", "scans", uiTemplate("scanHistory"), map[string]any{"Runs": runs, "Source": sourceCard(entry)})
 	})
@@ -145,11 +150,24 @@ func registerScanRoutes(router *gin.Engine, options ReviewRouterOptions, csrf fu
 			return
 		}
 		owned := false
+		run = scanRunForDisplay(run, workspace.Source.Slug, options.Scans)
+		if run.State == ScanFinalizationFailed {
+			progress.State = run.State
+			progress.FinalizationError = run.Error
+		}
 		if options.Scans != nil {
 			slug, id, active := options.Scans.Active()
 			owned = active && slug == workspace.Source.Slug && id == run.ID
 		}
-		writePage(c, "Scan details", "scans", uiTemplate("scanDetail"), map[string]any{"Run": run, "Progress": progress, "Owned": owned, "CSRFToken": options.CSRFToken, "ScanURL": scanURL(workspace.Source.Slug, run.ID), "Counters": scanCounters(progress)})
+		writePage(c, "Scan details", "scans", uiTemplate("scanDetail"), map[string]any{
+			"Run":                  run,
+			"Progress":             progress,
+			"Owned":                owned,
+			"CanRetryFinalization": options.Scans != nil,
+			"CSRFToken":            options.CSRFToken,
+			"ScanURL":              scanURL(workspace.Source.Slug, run.ID),
+			"Counters":             scanCounters(progress),
+		})
 	})
 	router.GET("/semantic/sources/:slug/scans/:id/status", func(c *gin.Context) {
 		workspace, run, ok := load(c)
@@ -161,8 +179,38 @@ func registerScanRoutes(router *gin.Engine, options ReviewRouterOptions, csrf fu
 			c.String(500, "Scan progress is unavailable.")
 			return
 		}
+		run = scanRunForDisplay(run, workspace.Source.Slug, options.Scans)
+		if run.State == ScanFinalizationFailed {
+			progress.State = run.State
+			progress.FinalizationError = run.Error
+		}
 		c.Header("Cache-Control", "no-store")
 		c.JSON(200, progress)
+	})
+	router.POST("/semantic/sources/:slug/scans/:id/retry-finalization", func(c *gin.Context) {
+		if !csrf(c) {
+			return
+		}
+		workspace, run, ok := load(c)
+		if !ok {
+			return
+		}
+		if options.Scans == nil {
+			c.String(http.StatusConflict, ErrScanFinalizationNotPending.Error())
+			return
+		}
+		if err := options.Scans.RetryFinalization(c.Request.Context(), workspace.Source.Slug, run.ID); err != nil {
+			switch {
+			case errors.Is(err, ErrScanBusy):
+				c.String(http.StatusConflict, "A scan is running. Wait for it to finish before retrying.")
+			case errors.Is(err, ErrScanFinalizationNotPending):
+				c.String(http.StatusConflict, err.Error())
+			default:
+				c.String(http.StatusServiceUnavailable, "Unable to save the scan result. Check source storage, then retry saving from the scan details.")
+			}
+			return
+		}
+		c.Redirect(http.StatusSeeOther, scanURL(workspace.Source.Slug, run.ID))
 	})
 	router.POST("/semantic/sources/:slug/scans/:id/cancel", func(c *gin.Context) {
 		if !csrf(c) {
@@ -185,9 +233,20 @@ func registerScanRoutes(router *gin.Engine, options ReviewRouterOptions, csrf fu
 		c.Redirect(303, scanURL(workspace.Source.Slug, run.ID))
 	})
 }
+
 func scanURL(slug string, id int64) string {
 	return fmt.Sprintf("/semantic/sources/%s/scans/%d", slug, id)
 }
+
+// Annotate a view without claiming the terminal result was persisted.
+func scanRunForDisplay(run ScanRun, slug string, manager *ScanManager) ScanRun {
+	if manager != nil && manager.PendingFinalization(slug, run.ID) {
+		run.State = ScanFinalizationFailed
+		run.Error = ErrScanFinalizationPending.Error()
+	}
+	return run
+}
+
 func scanSource(c *gin.Context, options ReviewRouterOptions) (SourceEntry, bool) {
 	entry, _, err := options.Workspaces.Lookup(c.Param("slug"))
 	if err != nil {
@@ -201,6 +260,7 @@ func scanSource(c *gin.Context, options ReviewRouterOptions) (SourceEntry, bool)
 	setReviewContext(c, child, "/semantic/sources/"+entry.Slug)
 	return entry, true
 }
+
 func newScanForm(c *gin.Context, options ReviewRouterOptions, entry SourceEntry) scanForm {
 	pages := entry.Config.MaxPages
 	if pages < 1 {
@@ -223,7 +283,7 @@ func newScanForm(c *gin.Context, options ReviewRouterOptions, entry SourceEntry)
 	form := scanForm{Source: sourceCard(entry), RequestKey: randomRequestKey(), Mode: mode, MaxPages: strconv.Itoa(pages), MaxDepth: strconv.Itoa(depth)}
 	form.Fetch = options.FetchSettings
 	if form.Fetch.Delay == 0 {
-		form.Fetch.Delay = 750000000
+		form.Fetch.Delay = 750 * time.Millisecond
 	}
 	if form.Fetch.MaxPageBytes == 0 {
 		form.Fetch.MaxPageBytes = DefaultMaxPageBytes

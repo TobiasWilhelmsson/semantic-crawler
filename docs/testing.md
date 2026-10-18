@@ -51,8 +51,8 @@ baseline. `proof` and reviewer-learning include automated feedback or simulated
 corrections. Read each stage's metrics separately; final parity does not mean
 autonomous model parity. Token F1 does not score grammar or sentence order.
 
-Reviewer-learning v22 checkpoints bind the saved baseline selection, source
-instructions, model policy, fetch settings and evaluation options. Resume with
+Reviewer-learning v23 checkpoints bind the saved baseline selection, source
+instructions, model policy, extraction version and evaluation options. Resume with
 the same inputs and report root:
 
 ```sh
@@ -60,8 +60,10 @@ make reviewer-learning-status REPORT_ROOT=artifacts/my-new-experiment
 make reviewer-learning-resume REPORT_ROOT=artifacts/my-new-experiment
 ```
 
-Changed inputs or old report versions need a fresh directory. Keep input files
-stable during a run; identity checks cannot freeze changing live websites.
+Changed inputs or old report versions (including v22) need a fresh directory.
+Keep input files stable during a run; identity checks cannot freeze changing live
+websites.
+
 Ordinary reports are published after completion; reviewer-learning writes
 incremental checkpoints. Use local filesystems with working advisory locks.
 

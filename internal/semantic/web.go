@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net"
@@ -263,15 +264,23 @@ func NewReviewRouterWithOptions(store ReviewWebStore, reviews *ReviewService, de
 				return
 			}
 			data := map[string]any{"Source": sourceCard(source), "Pending": 0, "HasWorkspace": false}
-			if workspace, err := options.Workspaces.Resolve(c.Request.Context(), source.Slug, false); err == nil {
+			workspace, workspaceErr := options.Workspaces.Resolve(c.Request.Context(), source.Slug, false)
+			if workspaceErr == nil {
 				data["HasWorkspace"] = true
 				var count int64
-				if err = workspace.Store.db.WithContext(c.Request.Context()).Model(&models.SemanticCandidate{}).Where("source_id = ? AND status IN ?", source.Config.SourceID, []string{"pending_review", "queued", "escalated"}).Count(&count).Error; err == nil {
+				workspaceErr = workspace.Store.db.WithContext(c.Request.Context()).Model(&models.SemanticCandidate{}).Where("source_id = ? AND status IN ?", source.Config.SourceID, []string{"pending_review", "queued", "escalated"}).Count(&count).Error
+				if workspaceErr == nil {
 					data["Pending"] = count
+					var runs []ScanRun
+					runs, workspaceErr = workspace.Store.ScanRuns(c.Request.Context(), source.Config.SourceID, 1)
+					if workspaceErr == nil && len(runs) > 0 {
+						data["LastScan"] = scanRunForDisplay(runs[0], source.Slug, options.Scans)
+					}
 				}
-				if runs, err := workspace.Store.ScanRuns(c.Request.Context(), source.Config.SourceID, 1); err == nil && len(runs) > 0 {
-					data["LastScan"] = runs[0]
-				}
+			}
+			if workspaceErr != nil && !errors.Is(workspaceErr, ErrWorkspaceEmpty) {
+				c.Status(http.StatusInternalServerError)
+				data["WorkspaceError"] = "Source data is unavailable. Check access to the database and its health before scanning again."
 			}
 			card := sourceCard(source)
 			if _, path, err := options.Workspaces.Lookup(source.Slug); err == nil {

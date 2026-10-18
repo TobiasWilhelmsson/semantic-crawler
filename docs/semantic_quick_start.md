@@ -11,6 +11,12 @@ Open **Start scan** and choose **Offline sample**. Watch progress under **Scans*
 
 Open [the local UI](http://127.0.0.1:8091/semantic). Setup preserves an existing `.env`; start builds the current code and keeps the UI in the foreground. Stop with Ctrl+C. Use `make help` for commands and `make doctor` for prerequisite checks. `make review` remains a startup alias; `make demo` and `make eval` are optional offline CLI workflows.
 
+If a scan shows **Result not saved**, check database access, then use **Retry
+saving result** in its details. This saves the original result without fetching
+pages or calling the model again. Keep the server running while resolving this
+failure: after a restart, the next requested scan marks abandoned runs as
+interrupted rather than recovering their in-memory result.
+
 Open a candidate under **Review queue**. The stored source snapshot is on the left; selected blocks are on the right. Click a block to compare it with the source. Approve correct output or retry with a concrete instruction.
 
 The offline fixture model makes no API calls. It tests the same kind of approved, source-correct output workflow without measuring a live model's quality. A saved `SkillRule` affects later retries or pages within its scope.

@@ -1,5 +1,43 @@
 # Verification and release limits
 
+## Local post-release review, 18 October 2026
+
+This review started from public revision `eb168c2`, including the merged
+dependency updates. The changes are listed under Unreleased in the
+[changelog](../CHANGELOG.md#unreleased).
+
+The review reproduced and corrected source-order changes from shuffled model
+selections, missed preformatted whitespace changes, ignored HTML base URLs and
+character encodings, and flattened nested notation in readable exports. It also
+corrected hidden source-storage failures, added recovery for failed scan-result
+writes without repeating extraction, and removed medical-only assumptions from
+baseline normalization and generated evaluation feedback. Both reviewer-learning
+modes now reject checkpoints from incompatible evaluator versions.
+
+The combined changes passed on macOS with Go 1.26.9:
+
+- 384 top-level tests and the full race suite, each with one intentional
+  subprocess-helper skip. Eighteen new top-level regression tests cover the
+  demonstrated failures and their recovery or compatibility boundaries.
+- Formatting, module tidiness/integrity, vet, pinned Staticcheck, JavaScript
+  syntax validation and build.
+- Setup and fresh offline demo, evaluation, benchmark, parity proof,
+  reviewer-learning, checkpoint status and same-input resume.
+- The local HTTP/CLI smoke walkthrough: four fixture pages, unchanged second
+  scan, three approvals, seven guides and four approved export formats.
+- A 20-second candidate-block fuzz run: 161,285 executions without a failure.
+- Vulnerability scanning: no known vulnerabilities in called code or imported
+  packages; one advisory remained in an unused required-module package.
+
+Tests use synthetic pages, controlled provider responses and real local HTTP
+servers/SQLite databases. No live model, third-party crawl or new human accuracy
+study ran. Historical benchmark figures were not recomputed or relabelled.
+The local walkthrough used an isolated source copy; public CI separately
+verifies source archives from committed revisions. Consult
+[Checks](https://github.com/TobiasWilhelmsson/semantic-crawler/actions/workflows/checks.yml)
+for public revision results. Native Windows/WSL execution and live-provider
+quality remain unverified.
+
 ## First source release, 14 October 2026
 
 The source candidate was reviewed as a complete file inventory before its first

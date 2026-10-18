@@ -114,7 +114,11 @@ func RenderExportDocument(document ExportDocument, format ExportFormat, profile 
 		if preserveExportListNumbers(doc, format) {
 			result.Warnings = append(result.Warnings, "Ordered list numbering represented as explicit decimal labels in section "+section.BlockID)
 		}
-		doc.Find("del,ins,s,strike,sup,sub").Each(func(_ int, element *goquery.Selection) {
+		// Convert descendants before their containers, which otherwise flatten
+		// nested notation (for example, a deleted 10^6 becomes the number 106).
+		inline := doc.Find("del,ins,s,strike,sup,sub")
+		for index := inline.Length() - 1; index >= 0; index-- {
+			element := inline.Eq(index)
 			value := element.Text()
 			var notation string
 			switch goquery.NodeName(element) {
@@ -131,7 +135,7 @@ func RenderExportDocument(document ExportDocument, format ExportFormat, profile 
 			}
 			element.ReplaceWithNodes(&html.Node{Type: html.TextNode, Data: notation})
 			result.Warnings = append(result.Warnings, "Semantic inline markup represented with explicit text notation in section "+section.BlockID)
-		})
+		}
 		doc.Find("dt,dd").Each(func(_ int, element *goquery.Selection) {
 			if goquery.NodeName(element) == "dt" {
 				element.AppendHtml(":")
