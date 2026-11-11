@@ -8,9 +8,9 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/joho/godotenv v1.5.1
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/yuin/goldmark v1.8.2
-	golang.org/x/net v0.61.0
-	golang.org/x/sys v0.49.0
+	github.com/yuin/goldmark v1.8.7
+	golang.org/x/net v0.62.0
+	golang.org/x/sys v0.50.0
 	gorm.io/datatypes v1.2.7
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.2
